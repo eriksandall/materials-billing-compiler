@@ -24,31 +24,33 @@ This project helps Jacobs Institute for Design Innovation at UC Berkeley compile
     - Subsidy eligibility list - name the tab 'Subsidy'.
 
 2. Get the sheet IDs for other data sources:
-    - Student registration data ("CCURE Output" sheet)
-    - Opt-out list (from the "Material Store Payment Tracking" sheet)
+    - Student registration data (the "CCURE Output" sheet)
     - Output spreadsheet (the "Material Store Payment Tracking" sheet)
   
-3. Update the `CONFIG` object in `Code.gs` with the spreadsheet IDs and tab names:
+3. Update the `CONFIG` object in `Config.gs` with the spreadsheet IDs and your email address:
   ```javascript
   const CONFIG = {
     inputData: {
-      sheetId: 'INPUT_DATA_SHEET_ID', // Single sheet ID for input data
+      sheetId: 'INPUT_DATA_SHEET_ID', // Update this
       tabs: {
         shopify: 'Shopify',
         pos: '3DPOS',
         subsidy: 'Subsidy'
       }
     },
-    registration: { sheetId: 'REG_SHEET_ID', tabName: 'C-Cure' },
+    registration: {
+		sheetId: 'REG_SHEET_ID', // Update this
+		tabName: 'C-Cure' 
+	},
     output: { 
-      sheetId: 'OUTPUT_SHEET_ID', 
+      sheetId: 'OUTPUT_SHEET_ID', // Update this
       tabs: {
         billing: 'Total amounts spent',
         optOut: 'Opt-out still need to pay',
-        optOutResponses: 'Opt-out form responses' // Added the opt-out responses tab here
+        optOutResponses: 'Opt-out form responses'
       }
     },
-    ownerEmail: 'your_email@domain.com' // Add your email here
+    ownerEmail: 'your_email@domain.com' // Update this
   };
   ```
 

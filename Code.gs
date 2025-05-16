@@ -1,28 +1,4 @@
 /**
- * Configuration object for the billing compiler
- */
-const CONFIG = {
-  inputData: {
-    sheetId: 'INPUT_DATA_SHEET_ID', // Single sheet ID for input data
-    tabs: {
-      shopify: 'Shopify',
-      pos: '3DPOS',
-      subsidy: 'Subsidy'
-    }
-  },
-  registration: { sheetId: 'REG_SHEET_ID', tabName: 'C-Cure' },
-  output: { 
-    sheetId: 'OUTPUT_SHEET_ID',
-    tabs: {
-      billing: 'Total amounts spent',
-      optOut: 'Opt-out still need to pay',
-      optOutResponses: 'Opt-out form responses' // Added the opt-out responses tab here
-    }
-  },
-  ownerEmail: 'your_email@domain.com' // Add your email here
-};
-
-/**
  * Opens a spreadsheet by ID and returns the specified sheet.
  * 
  * @param {string} sheetId - The ID of the spreadsheet
@@ -332,26 +308,30 @@ function writeTab(sheetId, tabName, headers, rows) {
  */
 function onOpen() {
   try {
-    // Check if current user is the owner
-    const userEmail = Session.getActiveUser().getEmail();
-    if (userEmail === CONFIG.ownerEmail) {
-      // Create custom menu for authorized user
-      SpreadsheetApp.getUi()
-        .createMenu('Jacobs Tools')
-        .addItem('Run Billing Script', 'main')
-        .addToUi();
-    }
+    // Create custom menu without checking user email first
+    SpreadsheetApp.getActiveSpreadsheet()
+      .addMenu('Jacobs Tools', [
+        {name: 'Run Billing Script', functionName: 'main'}
+      ]);
   } catch (e) {
-    // Handle any errors that might occur when checking user email
+    // Handle any errors that might occur
     console.error('Error in onOpen function:', e);
   }
 }
 
 /**
- * Main function to process all data and generate output
+ * Verifies user and runs the billing process
+ * This function is called from the menu and can use Session and UI
  */
 function main() {
   try {
+    // First verify the user is authorized
+    const userEmail = Session.getActiveUser().getEmail();
+    if (userEmail !== CONFIG.ownerEmail) {
+      SpreadsheetApp.getUi().alert('You are not authorized to run this script.');
+      return;
+    }
+    
     const ui = SpreadsheetApp.getUi();
     ui.alert('Starting billing process...');
     console.log('Starting billing compilation process');
