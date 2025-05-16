@@ -1,13 +1,149 @@
 /**
+ * Configuration object for the billing compiler
+ */
+const CONFIG = {
+  inputData: {
+    sheetId: 'INPUT_DATA_SHEET_ID', // Update this
+    tabs: {
+      shopify: 'Shopify',
+      pos: '3DPOS',
+      subsidy: 'Subsidy'
+    }
+  },
+  registration: { 
+    ccure: {
+      sheetId: 'REG_SHEET_ID', // Update this
+      tabName: 'C-Cure' 
+    },
+  JPS: {
+      sheetId: 'JPS_REG_SHEET_ID', // Update this
+      tabName: 'Approved'
+    }
+  },
+  output: { 
+    sheetId: 'OUTPUT_SHEET_ID', // Update this
+    tabs: {
+      billing: 'Total amounts spent',
+      optOut: 'Opt-out still need to pay',
+      optOutResponses: 'Opt-out form responses'
+    }
+  },
+  ownerEmail: 'your_email@domain.com' // Update this
+};
+
+/**
  * Opens a spreadsheet by ID and returns the specified sheet.
+ * Includes better error handling for missing sheets.
  * 
  * @param {string} sheetId - The ID of the spreadsheet
  * @param {string} tabName - The name of the sheet tab
  * @return {GoogleAppsScript.Spreadsheet.Sheet} The specified sheet
  */
 function getSheetByIdAndName(sheetId, tabName) {
-  const spreadsheet = SpreadsheetApp.openById(sheetId);
-  return spreadsheet.getSheetByName(tabName);
+  try {
+    // Try to open the spreadsheet
+    const spreadsheet = SpreadsheetApp.openById(sheetId);
+    if (!spreadsheet) {
+      throw new Error(`Could not open spreadsheet with ID: ${sheetId}`);
+    }
+    
+    // Try to get the specified sheet
+    const sheet = spreadsheet.getSheetByName(tabName);
+    if (!sheet) {
+      throw new Error(`Sheet "${tabName}" not found in spreadsheet with ID: ${sheetId}`);
+    }
+    
+    return sheet;
+  } catch (e) {
+    // If the error is about an invalid ID, provide a clearer message
+    if (e.message.includes("Spreadsheet")) {
+      console.error(`Error: Invalid spreadsheet ID or insufficient permissions: ${sheetId}`);
+      throw new Error(`Could not access spreadsheet. Please check the ID and your permissions: ${sheetId}`);
+    }
+    
+    // Re-throw the error with additional context
+    console.error(`Error accessing sheet "${tabName}": ${e.message}`);
+    throw e;
+  }
+}
+
+/**
+ * Validates that all required spreadsheets and sheets exist before starting the process
+ * 
+ * @return {Boolean} True if all validations pass
+ * @throws {Error} If any validation fails
+ */
+function validateSheets() {
+  console.log('Validating spreadsheets and sheets...');
+  
+  try {
+    // Check input data spreadsheet and sheets
+    console.log(`Checking input data spreadsheet: ${CONFIG.inputData.sheetId}`);
+    const inputSpreadsheet = SpreadsheetApp.openById(CONFIG.inputData.sheetId);
+    if (!inputSpreadsheet) {
+      throw new Error(`Could not open input data spreadsheet with ID: ${CONFIG.inputData.sheetId}`);
+    }
+    
+    // Check each tab in input data
+    const inputTabs = [
+      { name: CONFIG.inputData.tabs.shopify, desc: 'Shopify' },
+      { name: CONFIG.inputData.tabs.pos, desc: '3DPOS' },
+      { name: CONFIG.inputData.tabs.subsidy, desc: 'Subsidy' }
+    ];
+    
+    for (const tab of inputTabs) {
+      console.log(`Checking ${tab.desc} tab: ${tab.name}`);
+      const sheet = inputSpreadsheet.getSheetByName(tab.name);
+      if (!sheet) {
+        throw new Error(`${tab.desc} tab "${tab.name}" not found in input data spreadsheet`);
+      }
+    }
+    
+    // Check registration spreadsheets and sheets
+    console.log(`Checking C-Cure registration spreadsheet: ${CONFIG.registration.ccure.sheetId}`);
+    const ccureSpreadsheet = SpreadsheetApp.openById(CONFIG.registration.ccure.sheetId);
+    if (!ccureSpreadsheet) {
+      throw new Error(`Could not open C-Cure registration spreadsheet with ID: ${CONFIG.registration.ccure.sheetId}`);
+    }
+    
+    console.log(`Checking C-Cure registration tab: ${CONFIG.registration.ccure.tabName}`);
+    const ccureSheet = ccureSpreadsheet.getSheetByName(CONFIG.registration.ccure.tabName);
+    if (!ccureSheet) {
+      throw new Error(`C-Cure registration tab "${CONFIG.registration.ccure.tabName}" not found in C-Cure registration spreadsheet`);
+    }
+    
+    console.log(`Checking JPS registration spreadsheet: ${CONFIG.registration.jps.sheetId}`);
+    const jpsSpreadsheet = SpreadsheetApp.openById(CONFIG.registration.jps.sheetId);
+    if (!jpsSpreadsheet) {
+      throw new Error(`Could not open JPS registration spreadsheet with ID: ${CONFIG.registration.jps.sheetId}`);
+    }
+    
+    console.log(`Checking JPS registration tab: ${CONFIG.registration.jps.tabName}`);
+    const jpsSheet = jpsSpreadsheet.getSheetByName(CONFIG.registration.jps.tabName);
+    if (!jpsSheet) {
+      throw new Error(`JPS registration tab "${CONFIG.registration.jps.tabName}" not found in JPS registration spreadsheet`);
+    }
+    
+    // Check output spreadsheet and sheets
+    console.log(`Checking output spreadsheet: ${CONFIG.output.sheetId}`);
+    const outputSpreadsheet = SpreadsheetApp.openById(CONFIG.output.sheetId);
+    if (!outputSpreadsheet) {
+      throw new Error(`Could not open output spreadsheet with ID: ${CONFIG.output.sheetId}`);
+    }
+    
+    // Only check the opt-out responses tab since we'll create the other tabs
+    console.log(`Checking opt-out responses tab: ${CONFIG.output.tabs.optOutResponses}`);
+    const optOutSheet = outputSpreadsheet.getSheetByName(CONFIG.output.tabs.optOutResponses);
+    if (!optOutSheet) {
+      throw new Error(`Opt-out responses tab "${CONFIG.output.tabs.optOutResponses}" not found in output spreadsheet`);
+    }
+    
+    console.log('All spreadsheets and required sheets validated successfully');
+    return true;
+  } catch (e) {
+    console.error(`Validation error: ${e.message}`);
+    throw e;
+  }
 }
 
 /**
@@ -103,53 +239,110 @@ function read3DPOS() {
  * @return {Object} Object containing two Maps: emailToStudent and uidToStudent
  */
 function readRegistration() {
-  // Get the registration sheet
-  const sheet = getSheetByIdAndName(CONFIG.registration.sheetId, CONFIG.registration.tabName);
+  // Get the C-Cure registration sheet
+  const ccureSheet = getSheetByIdAndName(CONFIG.registration.ccure.sheetId, CONFIG.registration.ccure.tabName);
   
   // Get all data from the sheet
-  const data = sheet.getDataRange().getValues();
+  const ccureData = ccureSheet.getDataRange().getValues();
   
   // Extract header row and find indices of required columns
-  const headers = data[0];
-  const emailIdx = headers.indexOf('Email');
-  const uidIdx = headers.indexOf('UID');
-  const sidIdx = headers.indexOf('SID/EID');
-  const firstIdx = headers.indexOf('First');
-  const lastIdx = headers.indexOf('Last');
+  const ccureHeaders = ccureData[0];
+  const ccureEmailIdx = ccureHeaders.indexOf('Email');
+  const ccureUidIdx = ccureHeaders.indexOf('UID');
+  const ccureSidIdx = ccureHeaders.indexOf('SID/EID');
+  const ccureFirstIdx = ccureHeaders.indexOf('First');
+  const ccureLastIdx = ccureHeaders.indexOf('Last');
   
   // Ensure all required columns exist
-  if (emailIdx === -1 || uidIdx === -1 || sidIdx === -1 || 
-      firstIdx === -1 || lastIdx === -1) {
-    throw new Error('Registration sheet is missing required columns. Need: Email, UID, SID/EID, First, Last');
+  if (ccureEmailIdx === -1 || ccureUidIdx === -1 || ccureSidIdx === -1 || 
+      ccureFirstIdx === -1 || ccureLastIdx === -1) {
+    throw new Error('C-Cure registration sheet is missing required columns. Need: Email, UID, SID/EID, First, Last');
+  }
+  
+  // Get the JPS registration sheet
+  const jpsSheet = getSheetByIdAndName(CONFIG.registration.jps.sheetId, CONFIG.registration.jps.tabName);
+  
+  // Get all data from the sheet
+  const jpsData = jpsSheet.getDataRange().getValues();
+  
+  // Extract header row and find indices of required columns for JPS (which has different headers)
+  const jpsHeaders = jpsData[0];
+  const jpsEmailIdx = jpsHeaders.indexOf('Email Address'); // Different from C-Cure
+  const jpsUidIdx = jpsHeaders.indexOf('UID');
+  const jpsSidIdx = jpsHeaders.indexOf('SID/EID');
+  const jpsFirstIdx = jpsHeaders.indexOf('First Name'); // Different from C-Cure
+  const jpsLastIdx = jpsHeaders.indexOf('Last Name'); // Different from C-Cure
+  
+  // Ensure all required columns exist
+  if (jpsEmailIdx === -1 || jpsUidIdx === -1 || jpsSidIdx === -1 || 
+      jpsFirstIdx === -1 || jpsLastIdx === -1) {
+    throw new Error('JPS registration sheet is missing required columns. Need: Email Address, UID, SID/EID, First Name, Last Name');
   }
   
   // Create lookup maps
   const emailToStudent = new Map();
   const uidToStudent = new Map();
   
-  // Process data rows (skip header)
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
+  // Process C-Cure data rows (skip header)
+  for (let i = 1; i < ccureData.length; i++) {
+    const row = ccureData[i];
     
     // Skip empty rows
-    if (!row[emailIdx] && !row[uidIdx]) continue;
+    if (!row[ccureEmailIdx] && !row[ccureUidIdx]) continue;
     
     // Create student object
     const student = {
-      sid: row[sidIdx],
-      first: row[firstIdx],
-      last: row[lastIdx]
+      sid: row[ccureSidIdx],
+      first: row[ccureFirstIdx],
+      last: row[ccureLastIdx],
+      source: 'C-Cure'
     };
     
     // Add to maps if email/uid exists
-    if (row[emailIdx]) {
-      emailToStudent.set(row[emailIdx].toLowerCase(), student); // Store email lookup keys as lowercase
+    if (row[ccureEmailIdx]) {
+      emailToStudent.set(row[ccureEmailIdx].toLowerCase(), student); // Store email lookup keys as lowercase
     }
     
-    if (row[uidIdx]) {
-      uidToStudent.set(String(row[uidIdx]), student); // Convert UID to string for consistent lookup
+    if (row[ccureUidIdx]) {
+      uidToStudent.set(String(row[ccureUidIdx]), student); // Convert UID to string for consistent lookup
     }
   }
+  
+  console.log(`Added ${emailToStudent.size} email records and ${uidToStudent.size} UID records from C-Cure registration data`);
+  
+  // Track how many new records were added from JPS
+  let jpsEmailAdded = 0;
+  let jpsUidAdded = 0;
+  
+  // Process JPS data rows (skip header)
+  for (let i = 1; i < jpsData.length; i++) {
+    const row = jpsData[i];
+    
+    // Skip empty rows
+    if (!row[jpsEmailIdx] && !row[jpsUidIdx]) continue;
+    
+    // Create student object
+    const student = {
+      sid: row[jpsSidIdx],
+      first: row[jpsFirstIdx],
+      last: row[jpsLastIdx],
+      source: 'JPS'
+    };
+    
+    // Add to maps if email/uid exists and not already in maps (prioritize C-Cure data)
+    if (row[jpsEmailIdx] && !emailToStudent.has(row[jpsEmailIdx].toLowerCase())) {
+      emailToStudent.set(row[jpsEmailIdx].toLowerCase(), student); // Store email lookup keys as lowercase
+      jpsEmailAdded++;
+    }
+    
+    if (row[jpsUidIdx] && !uidToStudent.has(String(row[jpsUidIdx]))) {
+      uidToStudent.set(String(row[jpsUidIdx]), student); // Convert UID to string for consistent lookup
+      jpsUidAdded++;
+    }
+  }
+  
+  console.log(`Added ${jpsEmailAdded} email records and ${jpsUidAdded} UID records from JPS registration data`);
+  console.log(`Total registration records: ${emailToStudent.size} email records and ${uidToStudent.size} UID records`);
   
   return {
     emailToStudent,
@@ -295,6 +488,15 @@ function writeTab(sheetId, tabName, headers, rows) {
   // Write data rows if any exist
   if (rows && rows.length > 0) {
     sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+    
+    // Find the student ID column index (should be the 4th column, index 3)
+    const sidColumnIdx = headers.indexOf('Student ID');
+    
+    if (sidColumnIdx !== -1) {
+      // Format the SID column as plain text to prevent date formatting
+      const sidRange = sheet.getRange(2, sidColumnIdx + 1, rows.length, 1);
+      sidRange.setNumberFormat('@'); // @ is the format code for plain text
+    }
   }
   
   // Auto-resize columns for better readability
@@ -305,14 +507,19 @@ function writeTab(sheetId, tabName, headers, rows) {
 
 /**
  * Creates a custom menu when the spreadsheet is opened
+ * Note: This will only work when the script is container-bound to a spreadsheet
  */
 function onOpen() {
   try {
-    // Create custom menu without checking user email first
-    SpreadsheetApp.getActiveSpreadsheet()
-      .addMenu('Jacobs Tools', [
-        {name: 'Run Billing Script', functionName: 'main'}
-      ]);
+    // Use getUi() method to access the UI without opening a specific spreadsheet
+    const ui = SpreadsheetApp.getUi();
+    
+    // Create custom menu
+    ui.createMenu('Jacobs Tools')
+      .addItem('Run Billing Script', 'main')
+      .addToUi();
+    
+    console.log('Menu added successfully');
   } catch (e) {
     // Handle any errors that might occur
     console.error('Error in onOpen function:', e);
@@ -333,6 +540,15 @@ function main() {
     }
     
     const ui = SpreadsheetApp.getUi();
+    
+    // Validate all sheets before proceeding
+    try {
+      validateSheets();
+    } catch (e) {
+      ui.alert(`Error: ${e.message}\n\nPlease check your CONFIG settings and make sure all spreadsheets and sheets exist.`);
+      return;
+    }
+    
     ui.alert('Starting billing process...');
     console.log('Starting billing compilation process');
     
@@ -508,7 +724,7 @@ function main() {
     console.log(`Wrote ${billingRows.length} billing records`);
     
     console.log('Writing opt-out records to output spreadsheet...');
-    writeTab(CONFIG.output.sheetId, CONFIG.output.tabNames.optOut, optOutHeaders, optOutRows);
+    writeTab(CONFIG.output.sheetId, CONFIG.output.tabs.optOut, optOutHeaders, optOutRows);
     console.log(`Wrote ${optOutRows.length} opt-out records`);
     
     // Log final summary
