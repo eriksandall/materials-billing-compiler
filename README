@@ -1,6 +1,6 @@
 # Materials Billing Compiler
 
-<a href="https://github.com/google/gts" title="Code Style: Google"><img src="https://img.shields.io/badge/code%20style-google-blueviolet.svg"/></a>
+[![Code Style: Google](https://img.shields.io/badge/code%20style-google-blueviolet.svg)](https://github.com/google/gts)
 [![clasp](https://img.shields.io/badge/built%20with-clasp-4285f4.svg)](https://github.com/google/clasp)
 
 A Google Apps Script project that automates the collection and processing of student material fees from multiple data sources, applies subsidies, and generates billing reports.
@@ -10,24 +10,23 @@ A Google Apps Script project that automates the collection and processing of stu
 This project helps Jacobs Institute for Design Innovation at UC Berkeley compile billing information for student material fees from multiple systems (Shopify and 3DPrinterOS), apply subsidies, handle opt-out requests, and prepare data for the CalCentral billing system.
 
 ## Features
-
-  - **Multi-source data integration**: Combines purchase data from Shopify and 3DPrinterOS
-  - **Student information lookup**: Maps purchases to student records using email and UID
-  - **Subsidies management**: Applies subsidies to eligible students
-  - **Opt-out handling**: Separates students who opted out of CalCentral billing
-  - **Automated reporting**: Generates comprehensive billing reports in Google Sheets
+- **Multi-source data integration**: Combines purchase data from Shopify and 3DPrinterOS
+- **Student information lookup**: Maps purchases to student records using email and UID
+- **Subsidies management**: Applies subsidies to eligible students
+- **Opt-out handling**: Separates students who opted out of CalCentral billing
+- **Automated reporting**: Generates comprehensive billing reports in Google Sheets
 
 ## Setup Instructions
 
 1. Create a Google Sheet with tabs for the following some data sources (note the sheet ID and tab names):
-  - Shopify export data
-  - 3DPOS export data
-  - Subsidy eligibility list
+    - Shopify export data
+    - 3DPOS export data
+    - Subsidy eligibility list
 
 2. Get the sheet IDs and tab names for other data sources:
-  - Student registration data ("CCURE Output" sheet)
-  - Opt-out list (from the "Material Store Payment Tracking" sheet)
-  - Output spreadsheet (the "Material Store Payment Tracking" sheet)
+    - Student registration data ("CCURE Output" sheet)
+    - Opt-out list (from the "Material Store Payment Tracking" sheet)
+    - Output spreadsheet (the "Material Store Payment Tracking" sheet)
   
 3. Update the `CONFIG` object in `Code.gs` with the spreadsheet IDs and tab names:
   ```javascript
