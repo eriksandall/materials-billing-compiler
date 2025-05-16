@@ -18,12 +18,12 @@ This project helps Jacobs Institute for Design Innovation at UC Berkeley compile
 
 ## Setup Instructions
 
-1. Create a Google Sheet with tabs for the following some data sources (note the sheet ID and tab names):
-    - Shopify export data
-    - 3DPOS export data
-    - Subsidy eligibility list
+1. Create a Google Sheet with tabs for the following some data sources (note the sheet ID):
+    - Shopify export data - name the tab 'Shopify'.
+    - 3DPOS export data - name the tab '3DPOS'.
+    - Subsidy eligibility list - name the tab 'Subsidy'.
 
-2. Get the sheet IDs and tab names for other data sources:
+2. Get the sheet IDs for other data sources:
     - Student registration data ("CCURE Output" sheet)
     - Opt-out list (from the "Material Store Payment Tracking" sheet)
     - Output spreadsheet (the "Material Store Payment Tracking" sheet)
@@ -39,7 +39,7 @@ This project helps Jacobs Institute for Design Innovation at UC Berkeley compile
         subsidy: 'Subsidy'
       }
     },
-    registration: { sheetId: 'REG_SHEET_ID', tabName: 'Registration' },
+    registration: { sheetId: 'REG_SHEET_ID', tabName: 'C-Cure' },
     output: { 
       sheetId: 'OUTPUT_SHEET_ID', 
       tabs: {
@@ -61,13 +61,13 @@ Must include columns: `First Name`, `Last Name`, `Email`, `UID`, `Total`
 Must include columns: `Account Email`, `Total Sum ($)`
 
 ### Registration Data
-Must include columns: `Email`, `UID`, `SID/EID`, `First`, `Last`
+Must include columns: `Last`, `First`, `SID/EID`, `UID`, `Email`
 
 ### Subsidy List
-Must include column: `Email`
+Must include columns: `Email`, `UID`
 
 ### Opt-out List
-Must include column: `Email or SID`
+Must include columns: `Email Address`, `Student/Employee ID`
 
 ## Usage
 

@@ -10,9 +10,9 @@ const CONFIG = {
       subsidy: 'Subsidy'
     }
   },
-  registration: { sheetId: 'REG_SHEET_ID', tabName: 'Registration' },
+  registration: { sheetId: 'REG_SHEET_ID', tabName: 'C-Cure' },
   output: { 
-    sheetId: 'OUTPUT_SHEET_ID', 
+    sheetId: 'OUTPUT_SHEET_ID',
     tabs: {
       billing: 'Total amounts spent',
       optOut: 'Opt-out still need to pay',
@@ -237,16 +237,18 @@ function mergePurchases(shopifyArr, posArr) {
  * 
  * @param {Array<Object>} records - Array of purchase records
  * @param {Set<string>} subsidyEmails - Set of emails eligible for subsidy
+ * @param {Set<string>} subsidyUIDs - Set of UIDs eligible for subsidy
  * @return {Array<Object>} Updated records with subsidy applied
  */
-function applySubsidy(records, subsidyEmails) {
+function applySubsidy(records, subsidyEmails, subsidyUIDs) {
   // Loop through all records and apply subsidy where eligible
   records.forEach(record => {
-    // Normalize email for comparison
+    // Normalize email and UID for comparison
     const email = record.email ? record.email.toLowerCase() : '';
+    const uid = record.uid ? String(record.uid) : '';
     
-    // Check if student is eligible for subsidy
-    if (email && subsidyEmails.has(email)) {
+    // Check if student is eligible for subsidy by email or UID
+    if ((email && subsidyEmails.has(email)) || (uid && subsidyUIDs.has(uid))) {
       // Apply subsidy (minimum 0)
       record.subtotal = Math.max(0, record.subtotal - 25);
       record.subsidyApplied = true;
@@ -407,24 +409,31 @@ function main() {
     const subsidyData = subsidySheet.getDataRange().getValues();
     const subsidyHeader = subsidyData[0];
     const subsidyEmailIdx = subsidyHeader.indexOf('Email');
+    const subsidyUIDIdx = subsidyHeader.indexOf('UID');
     
-    if (subsidyEmailIdx === -1) {
-      throw new Error('Subsidy sheet is missing required Email column');
+    if (subsidyEmailIdx === -1 || subsidyUIDIdx === -1) {
+      throw new Error('Subsidy sheet is missing required Email or UID columns');
     }
     
-    // Create set of subsidy-eligible emails
+    // Create sets of subsidy-eligible emails and UIDs
     const subsidyEmails = new Set();
+    const subsidyUIDs = new Set();
     for (let i = 1; i < subsidyData.length; i++) {
       const email = subsidyData[i][subsidyEmailIdx];
+      const uid = subsidyData[i][subsidyUIDIdx];
       if (email) {
         subsidyEmails.add(email.toLowerCase());
       }
+      if (uid) {
+        subsidyUIDs.add(String(uid));
+      }
     }
-    console.log(`Found ${subsidyEmails.size} students eligible for subsidy`);
+    console.log(`Found ${subsidyEmails.size} students eligible for subsidy by email`);
+    console.log(`Found ${subsidyUIDs.size} students eligible for subsidy by UID`);
     
     // Apply subsidies to eligible records
     console.log('Applying subsidies to eligible records...');
-    records = applySubsidy(records, subsidyEmails);
+    records = applySubsidy(records, subsidyEmails, subsidyUIDs);
     console.log('Finished applying subsidies');
     
     // Read opt-out list
@@ -432,21 +441,30 @@ function main() {
     const optOutSheet = getSheetByIdAndName(CONFIG.output.sheetId, CONFIG.output.tabs.optOutResponses);
     const optOutData = optOutSheet.getDataRange().getValues();
     const optOutHeader = optOutData[0];
-    const optOutIdIdx = optOutHeader.indexOf('Email or SID');
     
-    if (optOutIdIdx === -1) {
-      throw new Error('Opt-out sheet is missing required Email or SID column');
+    const optOutEmailIdx = optOutHeader.indexOf('Email Address');
+    const optOutSidIdx = optOutHeader.indexOf('Student/Employee ID');
+    
+    if (optOutEmailIdx === -1 && optOutSidIdx === -1) {
+      throw new Error('Opt-out sheet is missing required columns. Need either Email Address or Student/Employee ID column');
     }
     
     // Create set of opt-out identifiers
     const optOutSet = new Set();
     for (let i = 1; i < optOutData.length; i++) {
-      const id = optOutData[i][optOutIdIdx];
-      if (id) {
-        optOutSet.add(String(id).toLowerCase());
+      const row = optOutData[i];
+      
+      // Add email to opt-out set if it exists
+      if (optOutEmailIdx !== -1 && row[optOutEmailIdx]) {
+        optOutSet.add(String(row[optOutEmailIdx]).toLowerCase());
+      }
+      
+      // Add SID to opt-out set if it exists
+      if (optOutSidIdx !== -1 && row[optOutSidIdx]) {
+        optOutSet.add(String(row[optOutSidIdx]).toLowerCase());
       }
     }
-    console.log(`Found ${optOutSet.size} students in opt-out list`);
+    console.log(`Found ${optOutSet.size} unique identifiers in opt-out list`);
     
     // Split records into billing and opt-out categories
     console.log('Splitting records into billing and opt-out categories...');
@@ -541,4 +559,3 @@ function main() {
     ui.alert('Error: ' + e.message);
   }
 }
-
