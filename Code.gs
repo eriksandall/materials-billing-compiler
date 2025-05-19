@@ -416,6 +416,9 @@ function applySubsidy(records, subsidyEmails, subsidyUIDs) {
     const email = record.email ? record.email.toLowerCase() : '';
     const uid = record.uid ? String(record.uid) : '';
     
+    // Always keep track of the original amount
+    record.originalSubtotal = record.subtotal;
+    
     // Check if student is eligible for subsidy by email or UID
     if ((email && subsidyEmails.has(email)) || (uid && subsidyUIDs.has(uid))) {
       // Apply subsidy (minimum 0)
@@ -686,35 +689,33 @@ function main() {
     console.log('Preparing data for billing tab...');
     const billingHeaders = ['First Name', 'Last Name', 'Email', 'Student ID', 'Subtotal', 'Subsidy Applied', 'Grand Total', 'Billed to CalCentral', 'Note'];
     const billingRows = billingRecords.map(record => {
-      const grandTotal = record.subtotal;
       return [
         record.first || '',
         record.last || '',
         record.email || '',
         record.sid || '',
-        record.subtotal + (record.subsidyApplied ? 25 : 0),  // Show original amount before subsidy
-        record.subsidyApplied ? 'Yes' : 'No',
-        grandTotal,
-        'Yes',  // Default to Yes for billing to CalCentral
-        ''      // Empty note column
+        record.originalSubtotal,  // Use the actual original amount
+        record.subsidyApplied ? 'Yes' : '',
+        record.subtotal,          // Use the post-subsidy amount
+        'Yes',                    // Default to Yes for CalCentral billing
+        ''                        // Empty note column
       ];
     });
-    
+
     // Prepare data for opt-out tab
     console.log('Preparing data for opt-out tab...');
     const optOutHeaders = ['First Name', 'Last Name', 'Email', 'Student ID', 'Subtotal', 'Subsidy Applied', 'Grand Total', 'Payment Method', 'Note'];
     const optOutRows = optOutRecords.map(record => {
-      const grandTotal = record.subtotal;
       return [
         record.first || '',
         record.last || '',
         record.email || '',
         record.sid || '',
-        record.subtotal + (record.subsidyApplied ? 25 : 0),  // Show original amount before subsidy
-        record.subsidyApplied ? 'Yes' : 'No',
-        grandTotal,
-        '',      // Empty payment method column
-        ''       // Empty note column
+        record.originalSubtotal,  // Use the actual original amount
+        record.subsidyApplied ? 'Yes' : '',
+        record.subtotal,          // Use the post-subsidy amount
+        '',                       // Empty payment method column
+        ''                        // Empty note column
       ];
     });
     
