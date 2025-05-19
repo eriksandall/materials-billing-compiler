@@ -517,15 +517,29 @@ function writeTab(sheetId, tabName, headers, rows) {
   
   // Write data rows if any exist
   if (rows && rows.length > 0) {
+    // Write the data rows
     sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
     
-    // Find the student ID column index (should be the 4th column, index 3)
+    // Find the student ID column index
     const sidColumnIdx = headers.indexOf('Student ID');
     
     if (sidColumnIdx !== -1) {
-      // Format the SID column as plain text to prevent date formatting
+      // Get the SID column range
       const sidRange = sheet.getRange(2, sidColumnIdx + 1, rows.length, 1);
-      sidRange.setNumberFormat('@'); // @ is the format code for plain text
+      
+      // Format SIDs as plain text to prevent date formatting
+      sidRange.setNumberFormat('@');
+      
+      // Read and set the value again to force each cell to be recognized as text.
+	  // This avoids the issue of Google Sheets interpreting SIDs as dates.
+      const sidValues = sidRange.getValues();
+      for (let i = 0; i < sidValues.length; i++) {
+        if (sidValues[i][0]) {
+          // This gets the value and forces a text interpretation without adding visible apostrophes
+          const cell = sheet.getRange(i + 2, sidColumnIdx + 1);
+          cell.setValue(cell.getValue());
+        }
+      }
     }
   }
   
