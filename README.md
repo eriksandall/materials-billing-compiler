@@ -97,6 +97,12 @@ The script generates two tabs in the output spreadsheet:
 1. **Total amounts spent**: Students to be billed through CalCentral
 2. **Opt-out still need to pay**: Students who opted out but still need to pay
 
+Each output includes:
+- Student information (name, email, ID)
+- Original subtotal (before subsidy)
+- Whether a subsidy was applied
+- Grand total (after subsidy)
+
 ## Special Features
 
 - **SID Format Preservation**: The script ensures Student IDs aren't incorrectly formatted as dates

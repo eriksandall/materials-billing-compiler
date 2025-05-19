@@ -1,4 +1,32 @@
 /**
+ * Materials Billing Compiler for Jacobs Institute
+ * -----------------------------------------------
+ * 
+ * This script automates the collection and processing of student material fees from 
+ * multiple data sources (Shopify and 3DPrinterOS), applies subsidies, handles opt-outs,
+ * and generates billing reports for CalCentral.
+ * 
+ * Main functionality:
+ * - Reads purchase data from Shopify and 3DPrinterOS
+ * - Merges purchase records by student email
+ * - Finds student ID numbers (SID) from C-Cure and JPS registration systems
+ * - Applies $25 subsidies to eligible students
+ * - Separates students who opted out of CalCentral billing
+ * - Generates output reports for CalCentral billing and opt-out students
+ * 
+ * Configuration:
+ * - Update CONFIG object with spreadsheet IDs and owner email
+ * - Requires specific data formats for each input sheet (see README.md)
+ * 
+ * Security:
+ * - Only authorized user (CONFIG.ownerEmail) can run the script
+ * 
+ * @author Erik Sandall
+ * @version 1.0.0
+ * @license MIT
+ */
+
+/**
  * Configuration object for the billing compiler
  */
 const CONFIG = {
@@ -55,7 +83,6 @@ function getSheetByIdAndName(sheetId, tabName) {
     
     return sheet;
   } catch (e) {
-    // If the error is about an invalid ID, provide a clearer message
     if (e.message.includes("Spreadsheet")) {
       console.error(`Error: Invalid spreadsheet ID or insufficient permissions: ${sheetId}`);
       throw new Error(`Could not access spreadsheet. Please check the ID and your permissions: ${sheetId}`);
@@ -267,11 +294,11 @@ function readRegistration() {
   
   // Extract header row and find indices of required columns for JPS (which has different headers)
   const jpsHeaders = jpsData[0];
-  const jpsEmailIdx = jpsHeaders.indexOf('Email Address'); // Different from C-Cure
+  const jpsEmailIdx = jpsHeaders.indexOf('Email Address');
   const jpsUidIdx = jpsHeaders.indexOf('UID');
   const jpsSidIdx = jpsHeaders.indexOf('SID/EID');
-  const jpsFirstIdx = jpsHeaders.indexOf('First Name'); // Different from C-Cure
-  const jpsLastIdx = jpsHeaders.indexOf('Last Name'); // Different from C-Cure
+  const jpsFirstIdx = jpsHeaders.indexOf('First Name');
+  const jpsLastIdx = jpsHeaders.indexOf('Last Name');
   
   // Ensure all required columns exist
   if (jpsEmailIdx === -1 || jpsUidIdx === -1 || jpsSidIdx === -1 || 
@@ -687,35 +714,35 @@ function main() {
     
     // Prepare data for billing tab
     console.log('Preparing data for billing tab...');
-    const billingHeaders = ['First Name', 'Last Name', 'Email', 'Student ID', 'Subtotal', 'Subsidy Applied', 'Grand Total', 'Billed to CalCentral', 'Note'];
+    const billingHeaders = ['First Name', 'Last Name', 'Email', 'Student ID', 'Subtotal', 'Subsidy?', 'Grand Total', 'Billed to CalCentral', 'Note'];
     const billingRows = billingRecords.map(record => {
       return [
         record.first || '',
         record.last || '',
         record.email || '',
         record.sid || '',
-        record.originalSubtotal,  // Use the actual original amount
+        record.originalSubtotal,
         record.subsidyApplied ? 'Yes' : '',
-        record.subtotal,          // Use the post-subsidy amount
-        'Yes',                    // Default to Yes for CalCentral billing
-        ''                        // Empty note column
+        record.subtotal,
+        '', // "Payment Method" column
+        '' // "Note" column
       ];
     });
 
     // Prepare data for opt-out tab
     console.log('Preparing data for opt-out tab...');
-    const optOutHeaders = ['First Name', 'Last Name', 'Email', 'Student ID', 'Subtotal', 'Subsidy Applied', 'Grand Total', 'Payment Method', 'Note'];
+    const optOutHeaders = ['First Name', 'Last Name', 'Email', 'Student ID', 'Subtotal', 'Subsidy?', 'Grand Total', 'Payment Method', 'Note'];
     const optOutRows = optOutRecords.map(record => {
       return [
         record.first || '',
         record.last || '',
         record.email || '',
         record.sid || '',
-        record.originalSubtotal,  // Use the actual original amount
+        record.originalSubtotal,
         record.subsidyApplied ? 'Yes' : '',
-        record.subtotal,          // Use the post-subsidy amount
-        '',                       // Empty payment method column
-        ''                        // Empty note column
+        record.subtotal,
+        '', // "Payment Method" column
+        '' // "Note" column
       ];
     });
     
